@@ -32,8 +32,9 @@ src/
     PlaceSearch.jsx     Text input (place name / ZIP)
     MapView.jsx         Home map + "Use this view" (bounds capture)
     QuizView.jsx        Session container: SM-2 picking, scoring, persistence
-    QuizCard.jsx        One card: map prompt + 2x2 answer grid + feedback
-    CardMap.jsx         CartoDB Positron map; gold target + gray network
+    QuizCard.jsx        One card: two map panels + 2x2 answer grid + feedback
+    SearchResults.jsx   Place-search disambiguation dropdown
+    StreetMap.jsx       Dark Matter map; gold target + gray network (interactive flag)
     AnswerButton.jsx    One multiple-choice button (idle/correct/wrong/reveal)
     FeedbackOverlay.jsx Right/wrong banner
   hooks/
@@ -103,8 +104,9 @@ src/
 - **Two map panels** (`StreetMap`, one static + one `interactive`), stacked on
   mobile, side-by-side on desktop ≥640px (explorer gets the wider column):
   - The **question image** (static): target street in **gold (#d4af37)** over a
-    gray unlabeled network on a monochrome CartoDB Positron base, framed with
-    context (maxZoom 15 — not too tight).
+    gray unlabeled network on a dark CartoDB **Dark Matter** base (no labels;
+    chosen over Positron for road contrast), framed with context (maxZoom 15 —
+    not too tight).
   - The **explorer** (`interactive`): same highlighted street, pan/zoom enabled
     so you can see its full extent and roam. Both panels highlight the street
     (Trey wanted the highlight visible on the big map). Roaming is cheat-safe

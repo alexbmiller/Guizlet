@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// CartoDB Positron (no labels) — monochrome base so street names can't be read
-// off the tiles. Locked design decision.
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png'
+// CartoDB Dark Matter (no labels) — dark monochrome base. No labels keeps the
+// quiz fair; the dark base matches the app shell and gives the gold highlight
+// (and the road network) much higher contrast than Positron did.
+const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png'
 const TILE_ATTRIBUTION = '© OpenStreetMap contributors, © CARTO'
 
 const GOLD = '#d4af37' // WitchTilt brand gold — the highlighted street

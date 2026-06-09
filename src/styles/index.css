@@ -403,7 +403,7 @@ body {
   width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #e8e8e8; /* matches Positron base while tiles load */
+  background: #1b1d1f; /* matches Dark Matter base while tiles load */
 }
 
 .streetmap--interactive {
