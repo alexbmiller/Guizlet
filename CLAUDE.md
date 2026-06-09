@@ -27,43 +27,100 @@ the name.
 ## File structure conventions
 ```
 src/
-  components/   React components (presentational + container)
-  hooks/        Custom hooks (e.g. useSM2 — spaced-repetition deck state)
-  utils/        Pure helpers (Overpass query builder, Nominatim wrapper, SM-2)
-  styles/       CSS
+  components/
+    HomeView.jsx        Area picker: search box + map + resume list
+    PlaceSearch.jsx     Text input (place name / ZIP)
+    MapView.jsx         Home map + "Use this view" (bounds capture)
+    QuizView.jsx        Session container: SM-2 picking, scoring, persistence
+    QuizCard.jsx        One card: map prompt + 2x2 answer grid + feedback
+    CardMap.jsx         CartoDB Positron map; gold target + gray network
+    AnswerButton.jsx    One multiple-choice button (idle/correct/wrong/reveal)
+    FeedbackOverlay.jsx Right/wrong banner
+  hooks/
+    useLocalStorage.js  Persisted state hook + readJSON/writeJSON/removeJSON
+  utils/
+    nominatim.js        geocodePlace(place) -> bbox
+    overpass.js         fetchStreets(bbox) -> ranked, name-deduped streets
+    cards.js            generateCards(streets) -> multiple-choice deck
+    sm2.js              review() / pickNext() — pure SM-2 scheduler
+    decks.js            Deck persistence + area-key slugs (built on the hook)
+    http.js             fetchWithTimeout (abort-based timeout + signal chaining)
+  styles/index.css
 ```
 - `utils/` holds **pure, side-effect-light** functions so they're easy to test
   and reuse. SM-2 takes an injected `now` rather than reading the clock.
-- Components stay thin; logic lives in hooks/utils.
-- Stubbed future modules throw `not implemented (stub)` with JSDoc describing
-  the intended contract, so the wiring slots are visible.
+- Components stay thin; session logic lives in `QuizView`, data logic in
+  `utils/`. App.jsx is the view-state machine
+  (`home | loading | quiz | summary | error`).
+- A deck is one localStorage blob per area, keyed `guizlet:deck:<areaKey>`,
+  holding the generated cards + their live SM-2 state + timestamps. Searching
+  or framing an area that already has a deck **resumes** it (no API calls).
 
 ## Gotchas
-- **Overpass rate limits** — shared free service. Debounce/cache; never query
-  on every keystroke or map move. Use `[out:json]`, keep queries tight.
-- **Nominatim usage policy** — max **1 req/sec**, no bulk use, a valid
-  identifying **User-Agent/Referer is required**. Cache + debounce. Public
-  instance is for light demo use only.
+- **CORS preflight / identification** — in a browser you cannot set
+  `User-Agent` on fetch, and any *custom* header (e.g. `X-Guizlet-Client`)
+  makes the request non-"simple" and triggers a preflight `OPTIONS` that the
+  public Nominatim endpoint does not reliably answer — which **breaks
+  geocoding**. So we send **no custom headers**; the browser's automatic
+  `User-Agent` + `Referer` satisfy the Nominatim policy for light demo use.
+  Overpass is POSTed with `Content-Type: application/x-www-form-urlencoded`
+  (a CORS-safelisted content type), so it also avoids a preflight. Both APIs
+  return `Access-Control-Allow-Origin: *`.
+- **Overpass needs a User-Agent from non-browsers** — Node/undici sends none
+  by default, and Overpass replies **HTTP 406** to UA-less requests (Nominatim
+  replies **403**). This only affects scripts/tests, not the browser. If you
+  write a Node verification harness, inject a `User-Agent` header.
+- **Overpass rate limits** — shared free service; can return 429 (rate-limit)
+  or 504 (timeout) under load, and 5–15s latency for larger areas. Don't query
+  on every keystroke/map move. We guard bboxes larger than 0.75° ("zoom in").
+- **Nominatim usage policy** — max **1 req/sec**, no bulk use. Public instance,
+  light demo use only.
 - **Leaflet CSS** — `leaflet/dist/leaflet.css` must be imported (done in
-  `MapView.jsx`) or the map renders broken/grey.
+  `MapView.jsx` and `CardMap.jsx`) or the map renders broken/grey.
 - **Map instance access** — react-leaflet exposes the map only via `useMap()`
   from *inside* `<MapContainer>`. `MapView` bridges it out via a tiny child
   (`MapInstanceBridge`) so the "Use this view" button can read `getBounds()`.
+  `CardMap` similarly uses an inner `useMap()` child to `fitBounds()`.
+- **OSM splits roads by name** — one street is often many `way` segments.
+  `overpass.js` dedupes by `name`, keeping the highest highway class (longest
+  geometry as tie-break). Distractor quality depends on this.
+- **Bbox order** — Nominatim `boundingbox` is `[south, north, west, east]`;
+  Overpass bbox filter is `(south, west, north, east)`. Easy to transpose.
 - **Default test bed** — Lewisville, TX (`[33.0462, -96.9942]`, zoom 14).
 
 ## Current scope
-See the first-pass scope brief that initialized this project (the session
-prompt). Summary of what exists now:
-- Vite + React + Leaflet scaffold that runs via `npm run dev`.
-- Map (OSM tiles, Lewisville default), an unwired place-search input, and a
-  "Use this view" button that logs current map bounds to the console.
-- Static placeholder UI for the future quiz mode.
-- Clean stub slots: `utils/overpass.js`, `utils/nominatim.js`, `utils/sm2.js`,
-  `hooks/useSM2.js`.
+**Quiz mode is implemented end-to-end** (second pass):
+- Pick an area by text search (Nominatim) or "Use this view" (map bounds).
+- Overpass fetches named streets; deck = the 50 most prominent
+  (trunk/primary/secondary > tertiary > residential), name-deduped.
+- Multiple-choice cards (4 options, 1 correct, 3 plausible distractors — see
+  the distractor heuristic in `cards.js`). The map shows the target street in
+  **gold (#d4af37)** over a gray unlabeled network on a monochrome CartoDB
+  Positron base.
+- Immediate green/red feedback, correct answer revealed on a miss, 1.5s
+  auto-advance. Binary right/wrong drives SM-2; a wrong answer reschedules in
+  10 minutes. New decks have every card due immediately.
+- Open-ended session with a "Card N of M" indicator and "End session";
+  end-of-session summary shows "X / Y correct".
+- Deck state (SM-2 + timestamps) persists to localStorage and survives reload;
+  decks are listed on the home screen for one-click resume.
 
-**Deferred to later passes:** real Overpass integration, real Nominatim
-geocoding, SM-2 logic, quiz flow (highlight + answer checking), localStorage
-persistence, Vercel deploy, styling beyond the minimum.
+### Design decisions made mid-build (worth noting)
+- **Distractor heuristic**: rank other street names by (1) shared final token
+  / street-type suffix ("Lane", "St", "Pkwy"…) then (2) closeness in character
+  length, take a candidate *window*, and randomly sample 3 (so repeat plays
+  vary). On a real Lewisville deck this gives all-4-same-suffix on ~41/50 cards
+  — e.g. "West Hebron Parkway" against other Parkways.
+- **Resume semantics**: searching/framing an area that already has a deck
+  resumes it rather than refetching, so progress isn't silently reset. There
+  is intentionally no "force fresh deck" control yet.
+- The first-pass `hooks/useSM2.js` stub was removed; SM-2 lives as pure
+  functions in `utils/sm2.js` consumed directly by `QuizView`. Persistence is
+  the new `hooks/useLocalStorage.js`.
+
+**Deferred to v2:** other quiz modes (audio, free-text, autocomplete),
+multi-area decks, difficulty tuning, accounts/sync/sharing, image map
+scanning, Vercel deploy, polish (animations/transitions).
 
 ## Conventions
 - Keep this CLAUDE.md current with architecture + gotchas.
