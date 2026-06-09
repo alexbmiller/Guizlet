@@ -1,0 +1,155 @@
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-ink: #042c3a;
+  --border: #334155;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.app__tagline {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--muted);
+}
+
+.app__panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+/* --- Place search ------------------------------------------------------ */
+.place-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.place-search__input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.place-search__input::placeholder {
+  color: var(--muted);
+}
+
+.place-search__submit,
+.mapview__use-view {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.place-search__submit:hover,
+.mapview__use-view:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* --- Map --------------------------------------------------------------- */
+.mapview__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.mapview__use-view:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mapview__map {
+  height: 420px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* --- Quiz mode (stub) -------------------------------------------------- */
+.quiz {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  opacity: 0.7;
+}
+
+.quiz__title {
+  margin: 0;
+  display: inline-block;
+}
+
+.quiz__coming-soon {
+  display: inline-block;
+  margin: 0 0 0 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+.quiz__map-placeholder {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.quiz__answer-placeholder {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quiz__answer-placeholder input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  color: var(--muted);
+}
