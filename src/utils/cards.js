@@ -22,20 +22,20 @@ const CANDIDATE_WINDOW = 14 // pool we sample distractors from
 
 /**
  * Generate a capped, ranked deck of multiple-choice cards.
- * @param {Array<{name:string, geometry:[number,number][], highway:string, highwayRank:number, osmId:number}>} streets
+ * @param {Array<{name:string, segments:[number,number][][], points:number, highway:string, highwayRank:number, osmId:number}>} streets
  *   Expected pre-sorted by prominence (fetchStreets does this), but we don't rely on it.
  * @param {{cap?: number, now?: number}} [opts]
- * @returns {Array<{id:string, streetName:string, streetGeometry:[number,number][], choices:string[], highway:string, sm2:object}>}
+ * @returns {Array<{id:string, streetName:string, streetGeometry:[number,number][][], choices:string[], highway:string, sm2:object}>}
  */
 export function generateCards(streets, opts = {}) {
   const cap = opts.cap ?? DECK_CAP
   const now = opts.now ?? Date.now()
 
-  // Unique by name, most prominent first.
+  // Unique by name, most prominent first (class, then total extent).
   const ranked = [...streets].sort(
     (a, b) =>
       b.highwayRank - a.highwayRank ||
-      b.geometry.length - a.geometry.length ||
+      b.points - a.points ||
       a.name.localeCompare(b.name),
   )
 
@@ -57,7 +57,7 @@ export function generateCards(streets, opts = {}) {
     return {
       id: String(street.osmId),
       streetName: street.name,
-      streetGeometry: street.geometry,
+      streetGeometry: street.segments, // multi-line: array of polylines
       highway: street.highway,
       choices,
       sm2: initialCardState(now),

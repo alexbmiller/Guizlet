@@ -1,32 +1,15 @@
-import { useMemo } from 'react'
-import CardMap from './CardMap.jsx'
-import ExplorerMap from './ExplorerMap.jsx'
+import StreetMap from './StreetMap.jsx'
 import AnswerButton from './AnswerButton.jsx'
 import FeedbackOverlay from './FeedbackOverlay.jsx'
 
-// A single quiz card: two map panels (the static prompt + the interactive
-// explorer) above the 2x2 multiple-choice grid. Presentational — session
-// logic (scoring, advancing) lives in QuizView.
+// A single quiz card: two map panels — a static "question image" prompt and a
+// bigger interactive explorer, both highlighting the full street — above the
+// 2x2 multiple-choice grid. Presentational; session logic lives in QuizView.
 //
 // `chosen` is the picked answer string once the user has answered, else null.
 export default function QuizCard({ card, networkGeometries, chosen, onAnswer }) {
   const locked = chosen != null
   const result = locked ? (chosen === card.streetName ? 'correct' : 'wrong') : null
-
-  // Bounds of the whole deck area (every street) — the explorer frames this so
-  // the target is somewhere on the roamable map to be found.
-  const areaBounds = useMemo(() => {
-    let minLat = Infinity, minLon = Infinity, maxLat = -Infinity, maxLon = -Infinity
-    for (const [lat, lon] of [card.streetGeometry, ...networkGeometries].flat()) {
-      if (lat < minLat) minLat = lat
-      if (lat > maxLat) maxLat = lat
-      if (lon < minLon) minLon = lon
-      if (lon > maxLon) maxLon = lon
-    }
-    if (!Number.isFinite(minLat)) return null
-    return [[minLat, minLon], [maxLat, maxLon]]
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card.id, networkGeometries])
 
   function stateFor(choice) {
     if (!locked) return 'idle'
@@ -39,8 +22,8 @@ export default function QuizCard({ card, networkGeometries, chosen, onAnswer }) 
   return (
     <div className="quizcard">
       <div className="quizcard__maps">
-        <figure className="quizcard__panel">
-          <CardMap
+        <figure className="quizcard__panel quizcard__panel--prompt">
+          <StreetMap
             cardId={card.id}
             streetGeometry={card.streetGeometry}
             networkGeometries={networkGeometries}
@@ -48,11 +31,14 @@ export default function QuizCard({ card, networkGeometries, chosen, onAnswer }) 
           <figcaption className="quizcard__caption">The street to name</figcaption>
         </figure>
 
-        <figure className="quizcard__panel">
-          <ExplorerMap areaBounds={areaBounds} resetKey={card.id} />
-          <figcaption className="quizcard__caption">
-            Explore — find where it is
-          </figcaption>
+        <figure className="quizcard__panel quizcard__panel--explorer">
+          <StreetMap
+            cardId={card.id}
+            streetGeometry={card.streetGeometry}
+            networkGeometries={networkGeometries}
+            interactive
+          />
+          <figcaption className="quizcard__caption">Explore — pan &amp; zoom</figcaption>
         </figure>
       </div>
 

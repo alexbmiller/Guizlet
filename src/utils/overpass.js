@@ -1,9 +1,11 @@
 // Overpass API — fetch named streets within a bounding box.
 //
-// We query named highway ways of the classes Guizlet quizzes on and return a
-// deduplicated, importance-ranked list. OSM commonly splits one road into
-// many `way` segments that share a `name`; we collapse those by name, keeping
-// a single representative geometry (highest highway class, then longest).
+// We query named highway ways of the classes Guizlet quizzes on and return an
+// importance-ranked list. OSM commonly splits one road into many `way`
+// segments that share a `name` (e.g. Marsh Lane = 200+ segments), so we MERGE
+// all segments of a name into one multi-line geometry — otherwise a major road
+// would be highlighted as a single block. Prominence is then ranked by the
+// street's total extent (point count), not one segment's length.
 //
 // Gotchas:
 //   - Overpass is a shared free service with real rate/load limits. It can
@@ -52,10 +54,12 @@ export function buildStreetsQuery(bbox) {
 }
 
 /**
- * Fetch and normalize named streets in a bbox.
+ * Fetch and normalize named streets in a bbox. Each street's `segments` is a
+ * multi-line: an array of polylines (one per merged OSM way), each a list of
+ * [lat,lon] points. `points` is the total point count (an extent proxy).
  * @param {{minlat:number, minlon:number, maxlat:number, maxlon:number}} bbox
  * @param {{signal?: AbortSignal, timeoutMs?: number}} [opts]
- * @returns {Promise<Array<{name:string, geometry:[number,number][], highway:string, highwayRank:number, osmId:number}>>}
+ * @returns {Promise<Array<{name:string, segments:[number,number][][], points:number, highway:string, highwayRank:number, osmId:number}>>}
  */
 export async function fetchStreets(bbox, opts = {}) {
   assertBboxSane(bbox)
@@ -95,11 +99,11 @@ export async function fetchStreets(bbox, opts = {}) {
   }
 
   const elements = Array.isArray(data?.elements) ? data.elements : []
-  return dedupeByName(elements)
+  return mergeByName(elements)
 }
 
-// Collapse OSM way segments to one entry per street name.
-function dedupeByName(elements) {
+// Merge all OSM way segments that share a name into one multi-line street.
+function mergeByName(elements) {
   /** @type {Map<string, any>} */
   const byName = new Map()
 
@@ -112,30 +116,30 @@ function dedupeByName(elements) {
 
     const highway = el.tags.highway
     const highwayRank = HIGHWAY_RANK[highway] ?? 0
-    const geometry = el.geometry.map((p) => [p.lat, p.lon])
+    const segment = el.geometry.map((p) => [p.lat, p.lon])
 
-    const existing = byName.get(name)
-    if (!existing) {
-      byName.set(name, { name, geometry, highway, highwayRank, osmId: el.id })
-      continue
+    let entry = byName.get(name)
+    if (!entry) {
+      entry = { name, segments: [], points: 0, highway, highwayRank, osmId: el.id }
+      byName.set(name, entry)
     }
 
-    // Keep the higher-ranked class; tie-break on the longer geometry so the
-    // representative segment is the most "drawable" one.
-    const better =
-      highwayRank > existing.highwayRank ||
-      (highwayRank === existing.highwayRank &&
-        geometry.length > existing.geometry.length)
-    if (better) {
-      byName.set(name, { name, geometry, highway, highwayRank, osmId: el.id })
+    entry.segments.push(segment)
+    entry.points += segment.length
+    // Track the highest highway class seen for this name (and a representative
+    // osmId / label from that class).
+    if (highwayRank > entry.highwayRank) {
+      entry.highwayRank = highwayRank
+      entry.highway = highway
+      entry.osmId = el.id
     }
   }
 
-  // Most prominent first; stable-ish tie-break by geometry length then name.
+  // Most prominent first: highway class, then total extent, then name.
   return [...byName.values()].sort(
     (a, b) =>
       b.highwayRank - a.highwayRank ||
-      b.geometry.length - a.geometry.length ||
+      b.points - a.points ||
       a.name.localeCompare(b.name),
   )
 }

@@ -387,8 +387,10 @@ body {
 }
 
 @media (min-width: 640px) {
+  /* Prompt is the compact close-up; explorer gets the extra room. */
   .quizcard__maps {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1.4fr;
+    align-items: start;
   }
 }
 
@@ -396,13 +398,16 @@ body {
   margin: 0;
 }
 
-.cardmap,
-.explorermap {
+.streetmap {
   height: 300px;
   width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: #e8e8e8; /* matches Positron base while tiles load */
+}
+
+.streetmap--interactive {
+  cursor: grab;
 }
 
 .quizcard__caption {
@@ -516,8 +521,7 @@ body {
     padding: 1rem 0.75rem 2.5rem;
   }
   /* Stacked maps on a phone — keep each short so both + answers fit. */
-  .cardmap,
-  .explorermap {
+  .streetmap {
     height: 240px;
   }
   .mapview__map {

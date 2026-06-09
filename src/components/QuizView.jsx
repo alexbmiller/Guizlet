@@ -27,7 +27,7 @@ export default function QuizView({ deck, onDeckChange, onEnd }) {
   const currentCard = deck.cards.find((c) => c.id === currentId) ?? null
 
   // Surrounding network = every other card's geometry (current is drawn gold
-  // on top by CardMap). Recomputed only when the current card changes.
+  // on top by StreetMap). Recomputed only when the current card changes.
   const networkGeometries = useMemo(
     () =>
       deck.cards
