@@ -38,7 +38,7 @@ body {
 }
 
 .app {
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 1.25rem 1rem 3rem;
 }
@@ -379,12 +379,40 @@ body {
 }
 
 /* --- Quiz card --------------------------------------------------------- */
-.cardmap {
-  height: 340px;
+/* Two map panels: stacked on mobile, side-by-side on desktop. */
+.quizcard__maps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .quizcard__maps {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.quizcard__panel {
+  margin: 0;
+}
+
+.cardmap,
+.explorermap {
+  height: 300px;
   width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: #e8e8e8; /* matches Positron base while tiles load */
+}
+
+.quizcard__caption {
+  margin-top: 0.4rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
 }
 
 .quizcard__question {
@@ -487,7 +515,11 @@ body {
   .app {
     padding: 1rem 0.75rem 2.5rem;
   }
+  /* Stacked maps on a phone — keep each short so both + answers fit. */
   .cardmap,
+  .explorermap {
+    height: 240px;
+  }
   .mapview__map {
     height: 300px;
   }

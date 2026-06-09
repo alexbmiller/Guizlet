@@ -10,20 +10,23 @@ const TILE_ATTRIBUTION = '© OpenStreetMap contributors, © CARTO'
 const GOLD = '#d4af37' // WitchTilt brand gold — the highlighted street
 const NETWORK = '#8a8f98' // surrounding streets, visible but secondary
 
-// Re-fit the view to the highlighted street whenever it changes.
+// Re-fit the view to the highlighted street whenever it changes. We keep a
+// low maxZoom and generous padding so the street always sits in a few blocks
+// of surrounding context (Trey: the old maxZoom 17 framed it too tightly) —
+// the shape of the neighborhood is what you match against in the explorer.
 function FitToStreet({ geometry, cardId }) {
   const map = useMap()
   useEffect(() => {
     if (!geometry?.length) return
-    map.fitBounds(geometry, { padding: [28, 28], maxZoom: 17 })
+    map.fitBounds(geometry, { padding: [45, 45], maxZoom: 15 })
   }, [map, cardId, geometry])
   return null
 }
 
 /**
- * The quiz card's map: the target street in gold over a gray, unlabeled
- * surrounding network on a monochrome base. Non-interactive (it's a prompt,
- * not a tool, and disabling pan/zoom keeps the focus on the highlighted road).
+ * The quiz "question image": the target street in gold over a gray, unlabeled
+ * surrounding network on a monochrome base. Deliberately NON-interactive — it
+ * is the prompt to identify, paired with the interactive ExplorerMap.
  *
  * @param {{
  *   cardId: string,

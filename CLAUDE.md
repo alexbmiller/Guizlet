@@ -99,9 +99,16 @@ src/
 - Overpass fetches named streets; deck = the 50 most prominent
   (trunk/primary/secondary > tertiary > residential), name-deduped.
 - Multiple-choice cards (4 options, 1 correct, 3 plausible distractors — see
-  the distractor heuristic in `cards.js`). The map shows the target street in
-  **gold (#d4af37)** over a gray unlabeled network on a monochrome CartoDB
-  Positron base.
+  the distractor heuristic in `cards.js`).
+- **Two map panels** (stacked on mobile, side-by-side on desktop ≥640px):
+  - `CardMap` — the static **question image**: target street in
+    **gold (#d4af37)** over a gray unlabeled network on a monochrome CartoDB
+    Positron base, framed with context (maxZoom 15 — not too tight).
+  - `ExplorerMap` — an **interactive** (pan/zoom), label-free map of the whole
+    deck area with **no highlight**. The game is to roam and find the area
+    matching the prompt. It re-frames to the area on each new card. (No
+    highlight is intentional; revealing it after answering would be an easy
+    future toggle.) Safe to roam because the tiles have no labels.
 - Immediate green/red feedback, correct answer revealed on a miss, 1.5s
   auto-advance. Binary right/wrong drives SM-2; a wrong answer reschedules in
   10 minutes. New decks have every card due immediately.
