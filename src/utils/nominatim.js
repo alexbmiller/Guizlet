@@ -18,14 +18,33 @@ export const USER_AGENT = 'Guizlet/0.1 (https://github.com/alexbmiller/Guizlet)'
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
 const DEFAULT_TIMEOUT_MS = 15000
+const DEFAULT_LIMIT = 6
 
 /**
- * Geocode a free-text place name or ZIP to a bounding box.
- * @param {string} place
- * @param {{signal?: AbortSignal, timeoutMs?: number}} [opts]
- * @returns {Promise<{minlat:number, minlon:number, maxlat:number, maxlon:number, center:[number,number], label:string}>}
+ * @typedef {Object} PlaceCandidate
+ * @property {number} minlat
+ * @property {number} minlon
+ * @property {number} maxlat
+ * @property {number} maxlon
+ * @property {[number,number]} center
+ * @property {string} label    Full display name.
+ * @property {string} kind     Short descriptor (e.g. "postcode", "city").
+ * @property {number} placeId  Nominatim place_id (stable per result).
  */
-export async function geocodePlace(place, opts = {}) {
+
+/**
+ * Search a free-text place name or ZIP and return ranked candidates.
+ *
+ * Returns MULTIPLE matches so the caller can disambiguate — e.g. "75007"
+ * matches both Paris (FR) and Carrollton-area (US) postcodes. NOTE: this is a
+ * single request per call; do NOT wire it to fire on every keystroke, which
+ * the public Nominatim instance disallows.
+ *
+ * @param {string} place
+ * @param {{signal?: AbortSignal, timeoutMs?: number, limit?: number}} [opts]
+ * @returns {Promise<PlaceCandidate[]>}
+ */
+export async function searchPlaces(place, opts = {}) {
   const query = (place ?? '').trim()
   if (!query) {
     throw new Error('Enter a place name or ZIP to search.')
@@ -34,7 +53,7 @@ export async function geocodePlace(place, opts = {}) {
   const params = new URLSearchParams({
     q: query,
     format: 'jsonv2',
-    limit: '1',
+    limit: String(opts.limit ?? DEFAULT_LIMIT),
     addressdetails: '0',
   })
 
@@ -63,7 +82,22 @@ export async function geocodePlace(place, opts = {}) {
     throw new Error(`No place found for "${query}". Try a different search.`)
   }
 
-  const hit = data[0]
+  return data.map(normalizeHit)
+}
+
+/**
+ * Geocode to a single best bounding box (the top-ranked candidate).
+ * Kept for non-interactive callers; interactive UI should use searchPlaces.
+ * @param {string} place
+ * @param {{signal?: AbortSignal, timeoutMs?: number}} [opts]
+ * @returns {Promise<PlaceCandidate>}
+ */
+export async function geocodePlace(place, opts = {}) {
+  const [best] = await searchPlaces(place, { ...opts, limit: 1 })
+  return best
+}
+
+function normalizeHit(hit) {
   // Nominatim boundingbox is [south, north, west, east] as strings.
   const [south, north, west, east] = hit.boundingbox.map(Number)
   return {
@@ -73,5 +107,7 @@ export async function geocodePlace(place, opts = {}) {
     maxlon: east,
     center: [Number(hit.lat), Number(hit.lon)],
     label: hit.display_name,
+    kind: hit.addresstype || hit.type || hit.category || 'place',
+    placeId: hit.place_id,
   }
 }

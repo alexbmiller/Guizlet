@@ -91,6 +91,11 @@ src/
 ## Current scope
 **Quiz mode is implemented end-to-end** (second pass):
 - Pick an area by text search (Nominatim) or "Use this view" (map bounds).
+  Text search is **search-then-pick**: submitting runs one Nominatim lookup
+  and shows a dropdown of candidate places so the user disambiguates (e.g.
+  "75007" matches both Carrollton, TX and Paris) — we never silently commit to
+  the top hit. NOT keystroke autocomplete (the public Nominatim instance
+  disallows per-keystroke querying); one request per submit.
 - Overpass fetches named streets; deck = the 50 most prominent
   (trunk/primary/secondary > tertiary > residential), name-deduped.
 - Multiple-choice cards (4 options, 1 correct, 3 plausible distractors — see

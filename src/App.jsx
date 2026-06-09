@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import HomeView from './components/HomeView.jsx'
 import QuizView from './components/QuizView.jsx'
-import { geocodePlace } from './utils/nominatim.js'
+import { searchPlaces } from './utils/nominatim.js'
 import { fetchStreets } from './utils/overpass.js'
 import { generateCards } from './utils/cards.js'
 import {
@@ -27,6 +27,12 @@ export default function App() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [summary, setSummary] = useState(null)
   const [decks, setDecks] = useState(() => listDecks())
+
+  // Place-search dropdown: candidates to disambiguate (e.g. "75007" matches
+  // both Paris and a US ZIP), plus its own inline loading/error state.
+  const [searchResults, setSearchResults] = useState(null)
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState('')
 
   // Remember the last area studied (a genuine, simple use of the hook).
   const [, setLastArea] = useLocalStorage('guizlet:lastArea', null)
@@ -62,27 +68,61 @@ export default function App() {
     return true
   }, [])
 
-  // Text search: geocode -> bbox -> streets -> deck.
-  const handleSearch = useCallback(
-    async (place) => {
-      const areaKey = areaKeyFromPlace(place)
+  // Step 1 of text search: look up candidate places to disambiguate. Stays on
+  // the home view and populates the dropdown rather than committing to a place.
+  const handleSearchSubmit = useCallback(async (place) => {
+    const controller = new AbortController()
+    abortRef.current = controller
+    setSearchError('')
+    setSearchResults(null)
+    setSearching(true)
+    try {
+      const results = await searchPlaces(place, { signal: controller.signal })
+      setSearchResults(results)
+    } catch (err) {
+      if (err?.name === 'AbortError') return
+      setSearchError(err?.message || 'Search failed. Please try again.')
+    } finally {
+      setSearching(false)
+    }
+  }, [])
+
+  // Step 2: the user picked a specific candidate -> resume or fetch its streets.
+  const handlePickPlace = useCallback(
+    async (candidate) => {
+      setSearchResults(null)
+      const areaKey = areaKeyFromPlace(candidate.label)
       // Same place already studied? Resume instantly (no API calls).
       if (resumeDeck(areaKey)) return
 
       const controller = new AbortController()
       abortRef.current = controller
       setErrorMsg('')
-      setLoadingMsg('Looking up that place…')
+      setLoadingMsg('Fetching streets… this can take a few seconds.')
       setView('loading')
       try {
-        const bbox = await geocodePlace(place, { signal: controller.signal })
-        setLoadingMsg('Fetching streets… this can take a few seconds.')
-        await fetchAndStart({ areaKey, label: bbox.label, bbox, signal: controller.signal })
+        // A candidate is already bbox-shaped (minlat/minlon/maxlat/maxlon).
+        await fetchAndStart({
+          areaKey,
+          label: candidate.label,
+          bbox: candidate,
+          signal: controller.signal,
+        })
       } catch (err) {
         handleFlowError(err)
       }
     },
     [fetchAndStart, resumeDeck],
+  )
+
+  // Editing the query dismisses stale results from a previous search.
+  const handleQueryChange = useCallback(
+    (value) => {
+      setQuery(value)
+      setSearchResults(null)
+      setSearchError('')
+    },
+    [],
   )
 
   // Map browse: current Leaflet bounds -> bbox -> streets -> deck.
@@ -145,6 +185,8 @@ export default function App() {
 
   function goHome() {
     setErrorMsg('')
+    setSearchError('')
+    setSearchResults(null)
     refreshDecks()
     setView('home')
   }
@@ -160,8 +202,12 @@ export default function App() {
         {view === 'home' && (
           <HomeView
             query={query}
-            onQueryChange={setQuery}
-            onSearch={handleSearch}
+            onQueryChange={handleQueryChange}
+            onSearch={handleSearchSubmit}
+            searching={searching}
+            searchResults={searchResults}
+            searchError={searchError}
+            onPickPlace={handlePickPlace}
             center={DEFAULT_CENTER}
             zoom={DEFAULT_ZOOM}
             onUseThisView={handleUseThisView}

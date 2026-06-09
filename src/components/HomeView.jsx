@@ -1,4 +1,5 @@
 import PlaceSearch from './PlaceSearch.jsx'
+import SearchResults from './SearchResults.jsx'
 import MapView from './MapView.jsx'
 
 // Home screen: pick an area by typing a place/ZIP or by framing the map and
@@ -7,6 +8,10 @@ export default function HomeView({
   query,
   onQueryChange,
   onSearch,
+  searching,
+  searchResults,
+  searchError,
+  onPickPlace,
   center,
   zoom,
   onUseThisView,
@@ -20,7 +25,20 @@ export default function HomeView({
         map and use the current view.
       </p>
 
-      <PlaceSearch value={query} onChange={onQueryChange} onSubmit={onSearch} />
+      <div className="home__search">
+        <PlaceSearch
+          value={query}
+          onChange={onQueryChange}
+          onSubmit={onSearch}
+          loading={searching}
+        />
+        <SearchResults
+          searching={searching}
+          results={searchResults}
+          error={searchError}
+          onPick={onPickPlace}
+        />
+      </div>
 
       <MapView center={center} zoom={zoom} onUseThisView={onUseThisView} />
 
