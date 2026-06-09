@@ -120,7 +120,25 @@ src/
 
 **Deferred to v2:** other quiz modes (audio, free-text, autocomplete),
 multi-area decks, difficulty tuning, accounts/sync/sharing, image map
-scanning, Vercel deploy, polish (animations/transitions).
+scanning, polish (animations/transitions).
+
+## Deployment
+- **Host:** Vercel project `guizlet` (scope `alexbmillers-projects`), connected
+  to the GitHub repo — pushes to `main` auto-deploy to production, PRs get
+  preview deploys.
+- **Domain:** `guizlet.witchtilt.com` (added in the Vercel project's Domains;
+  point a **CNAME** `guizlet` → `cname.vercel-dns.com` at the `witchtilt.com`
+  DNS provider). The default `guizlet.vercel.app` alias also stays live.
+- **Build:** auto-detected **Vite** preset — build command `vite build`,
+  output directory `dist`, install `npm install`. No `vercel.json` needed: the
+  app is a single-page client bundle with no server routes or SPA rewrites.
+- **Base path:** Vite `base` is left default `/` — we serve from a subdomain
+  root, not a subpath. Don't set `base` unless that changes.
+- **Mixed content:** all runtime endpoints are https (Nominatim, Overpass,
+  CartoDB + OSM tiles, Google Fonts); keep them https or the deployed (https)
+  site will block them.
+- **No env vars / secrets** — everything is client-side against public OSM
+  services.
 
 ## Conventions
 - Keep this CLAUDE.md current with architecture + gotchas.
